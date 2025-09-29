@@ -6,13 +6,12 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.</center></h2>
+  * Copyright (c) 2024 STMicroelectronics.
+  * All rights reserved.
   *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   ******************************************************************************
   */
@@ -20,11 +19,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-int led_index = 0;
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "header.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -34,6 +31,7 @@ int led_index = 0;
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -58,33 +56,6 @@ static void MX_TIM2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-// Hàm hiển thị số ra LED 7 đoạn (PB0–PB6)
-void display7SEG(int num)
-{
-    static const uint8_t seg_pattern[10] = {
-        0x3F, // 0
-        0x06, // 1
-        0x5B, // 2
-        0x4F, // 3
-        0x66, // 4
-        0x6D, // 5
-        0x7D, // 6
-        0x07, // 7
-        0x7F, // 8
-        0x6F  // 9
-    };
-
-    uint8_t pattern = seg_pattern[num];
-
-    for (int i = 0; i < 7; i++) {
-        if (pattern & (1 << i)) {
-            HAL_GPIO_WritePin(GPIOB, (1 << i), GPIO_PIN_RESET); // bật segment
-        } else {
-            HAL_GPIO_WritePin(GPIOB, (1 << i), GPIO_PIN_SET);   // tắt segment
-        }
-    }
-}
-
 
 /* USER CODE END 0 */
 
@@ -94,6 +65,7 @@ void display7SEG(int num)
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -117,18 +89,42 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM2_Init();
+//
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  setBlink(10);
+  setclock(10);
   while (1)
   {
     /* USER CODE END WHILE */
-	  HAL_GPIO_TogglePin(GPIOA, LED_RED_Pin); // Đổi trạng thái LED_RED
-	  HAL_Delay(1000);
-    /* USER CODE BEGIN 3 */
+	  if(clockBlink_flag == 1){ //end 1s
+		  HAL_GPIO_TogglePin(dot_GPIO_Port, dot_Pin); // Toggle DOT after 1s
+	  sec++;
+	  if (sec >= 60) {
+			  sec = 0;
+			  min++;
+		  }
+		  if (min >= 60){
+			  min = 0;
+		  hrs++;
+		  }
+		  if (hrs >= 24) hrs = 0; // Running the clock at 1s
+		  setBlink(1000);
+		  updateClockBuffer();
+		  HAL_Delay(1000);
+	  }
+//
+  if (clock0_flag == 1){ //end 0.25s
+	  update7SEG(index_led++);
+	  setclock(250);
+  }
+////    /* USER CODE BEGIN 3 */
+//	  updateClockBuffer();
+
   }
   /* USER CODE END 3 */
 }
@@ -153,6 +149,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -189,7 +186,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 7999;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 499;
+  htim2.Init.Period = 10;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -221,56 +218,45 @@ static void MX_TIM2_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
+/* USER CODE BEGIN MX_GPIO_Init_1 */
+/* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, LED_RED_Pin|GPIO_PIN_6|GPIO_PIN_7, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, dot_Pin|testled_Pin|en0_Pin|en1_Pin
+                          |en2_Pin|en3_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, SEG0_Pin|SEG1_Pin|SEG2_Pin|SEG3_Pin
-                          |SEG4_Pin|SEG5_Pin|SEG6_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, aseg_Pin|bseg_Pin|cseg_Pin|dseg_Pin
+                          |eseg_Pin|fseg_Pin|gseg_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : LED_RED_Pin PA6 PA7 */
-  GPIO_InitStruct.Pin = LED_RED_Pin|GPIO_PIN_6|GPIO_PIN_7;
+  /*Configure GPIO pins : dot_Pin testled_Pin en0_Pin en1_Pin
+                           en2_Pin en3_Pin */
+  GPIO_InitStruct.Pin = dot_Pin|testled_Pin|en0_Pin|en1_Pin
+                          |en2_Pin|en3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : SEG0_Pin SEG1_Pin SEG2_Pin SEG3_Pin
-                           SEG4_Pin SEG5_Pin SEG6_Pin */
-  GPIO_InitStruct.Pin = SEG0_Pin|SEG1_Pin|SEG2_Pin|SEG3_Pin
-                          |SEG4_Pin|SEG5_Pin|SEG6_Pin;
+  /*Configure GPIO pins : aseg_Pin bseg_Pin cseg_Pin dseg_Pin
+                           eseg_Pin fseg_Pin gseg_Pin */
+  GPIO_InitStruct.Pin = aseg_Pin|bseg_Pin|cseg_Pin|dseg_Pin
+                          |eseg_Pin|fseg_Pin|gseg_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+/* USER CODE BEGIN MX_GPIO_Init_2 */
+/* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
-// Hàm ngắt timer
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	if (htim->Instance == TIM2) {
-	        if (led_index == 0) {
-	            // Bật LED1, tắt LED2
-	            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // PNP active low
-	            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
-	            display7SEG(1);
-	            led_index = 1;
-	        } else {
-	            // Bật LED2, tắt LED1
-	            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);
-	            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
-	            display7SEG(2);
-	            led_index = 0;
-	        }
-	    }
-}
+
 /* USER CODE END 4 */
 
 /**
@@ -304,5 +290,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
